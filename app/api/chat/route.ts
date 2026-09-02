@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const { message } = await request.json();
@@ -11,7 +13,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const rawApiKey = process.env.GEMINI_API_KEY || process.env.AI_API_KEY;
+    const apiKey = rawApiKey ? rawApiKey.replace(/^["']|["']$/g, '').trim() : '';
 
     if (!apiKey) {
       return NextResponse.json(
