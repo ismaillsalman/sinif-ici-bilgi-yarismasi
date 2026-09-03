@@ -64,24 +64,37 @@ Kuralların:
       );
 
       if (!response.ok) {
-        // If the API call fails, return a helpful mock response
-        return NextResponse.json({
-          reply: getMockResponse(message),
-        });
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData?.error?.message || `Gemini API HTTP ${response.status} hatası`;
+        console.error('Gemini API Error:', response.status, JSON.stringify(errorData));
+        return NextResponse.json(
+          {
+            error: `AI servisi hatası: ${errorMessage}`,
+          },
+          { status: response.status }
+        );
       }
 
       const data = await response.json();
       
       // Extract the text from the Gemini response structure
-      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || getMockResponse(message);
+      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!reply) {
+        console.error('Gemini API: Boş cevap döndü', JSON.stringify(data));
+        return NextResponse.json(
+          { error: 'AI modeli boş bir cevap döndürdü. Lütfen tekrar deneyin.' },
+          { status: 502 }
+        );
+      }
 
       return NextResponse.json({ reply });
     } catch (error) {
-      console.error('Gemini API Error:', error);
-      // If external API fails, use mock responses
-      return NextResponse.json({
-        reply: getMockResponse(message),
-      });
+      console.error('Gemini API Network Error:', error);
+      return NextResponse.json(
+        { error: `AI servisine bağlanılamadı: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}` },
+        { status: 502 }
+      );
     }
   } catch (error) {
     console.error('Chat API Route Error:', error);
