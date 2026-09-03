@@ -38,69 +38,91 @@ Kuralların:
 - Sadece fen bilimleri (fizik, kimya, biyoloji, yer bilimleri, astronomi) konularında cevap ver.
 - Fen bilimleri dışındaki sorularda nazikçe konuyu fen bilimlerine yönlendir.`;
 
-    const model = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+    // Models to try in order (flash-lite models have separate quotas and lower latency)
+    const configuredModel = process.env.GEMINI_MODEL;
+    const candidateModels = Array.from(
+      new Set(
+        [
+          configuredModel,
+          'gemini-3.5-flash-lite',
+          'gemini-3.1-flash-lite',
+          'gemini-3.6-flash',
+        ].filter(Boolean) as string[]
+      )
+    );
 
-    // Make API call to the Gemini REST API
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            systemInstruction: {
-              parts: [{ text: systemInstruction }]
-            },
-            contents: [{
-              role: 'user',
-              parts: [{ text: message }]
-            }],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 2048,
-            }
-          }),
-        }
-      );
+    let lastError = '';
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData?.error?.message || `Gemini API HTTP ${response.status} hatası`;
-        console.error('Gemini API Error:', response.status, JSON.stringify(errorData));
-        return NextResponse.json(
+    for (const model of candidateModels) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
           {
-            error: `AI servisi hatası: ${errorMessage}`,
-          },
-          { status: response.status }
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              systemInstruction: {
+                parts: [{ text: systemInstruction }],
+              },
+              contents: [
+                {
+                  role: 'user',
+                  parts: [{ text: message }],
+                },
+              ],
+              generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 2048,
+              },
+            }),
+          }
         );
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          const errMsg = errorData?.error?.message || `HTTP ${response.status}`;
+          lastError = errMsg;
+          console.warn(`Gemini API (${model}) hatası: ${response.status} - ${errMsg}. Diğer modele geçiliyor...`);
+
+          // If rate limit (429) or high demand (503), try next model immediately
+          if (response.status === 429 || response.status === 503) {
+            continue;
+          }
+          // If 404 (model not found), try next model
+          if (response.status === 404) {
+            continue;
+          }
+          continue;
+        }
+
+        const data = await response.json();
+        const candidate = data.candidates?.[0];
+        const parts = candidate?.content?.parts || [];
+        const reply = parts
+          .map((p: { text?: string }) => p.text || '')
+          .filter(Boolean)
+          .join('\n')
+          .trim();
+
+        if (reply) {
+          return NextResponse.json({ reply });
+        }
+
+        console.warn(`Gemini API (${model}): Boş cevap döndü, diğer model deneniyor.`);
+      } catch (err) {
+        lastError = err instanceof Error ? err.message : 'Bağlantı hatası';
+        console.warn(`Gemini API (${model}) ağ hatası:`, err);
       }
-
-      const data = await response.json();
-      
-      // Extract the text from all candidate parts
-      const candidate = data.candidates?.[0];
-      const parts = candidate?.content?.parts || [];
-      const reply = parts
-        .map((p: { text?: string }) => p.text || '')
-        .filter(Boolean)
-        .join('\n')
-        .trim();
-
-      if (!reply) {
-        console.warn('Gemini API: Model boş cevap döndürdü veya token limiti aşıldı, yedek yanıt kullanılıyor.', JSON.stringify(data));
-        return NextResponse.json({ reply: getMockResponse(message) });
-      }
-
-      return NextResponse.json({ reply });
-    } catch (error) {
-      console.error('Gemini API Network Error:', error);
-      return NextResponse.json(
-        { error: `AI servisine bağlanılamadı: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}` },
-        { status: 502 }
-      );
     }
+
+    // If all models hit quota or failed, gracefully provide education response instead of crashing
+    console.warn('Tüm Gemini modelleri kota/bağlantı sınırına ulaştı. Akıllı yedek cevap döndürülüyor.', lastError);
+    return NextResponse.json({
+      reply: getMockResponse(message),
+      isFallback: true,
+    });
   } catch (error) {
     console.error('Chat API Route Error:', error);
     return NextResponse.json(

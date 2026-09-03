@@ -43,10 +43,12 @@ export default function AiSciencePage() {
       const data = await response.json();
 
       if (!response.ok) {
-        if (response.status === 503) {
+        if (response.status === 429) {
+          setError('AI öğretmen şu anda çok yoğun. Lütfen 10-15 saniye bekleyip tekrar sorunuzu gönderin.');
+        } else if (response.status === 503) {
           setError(data.error || 'AI asistan şu anda yapılandırılmadı.');
         } else {
-          setError(data.error || 'Bir hata oluştu.');
+          setError(data.error || 'Bir hata oluştu. Lütfen tekrar deneyin.');
         }
         setIsLoading(false);
         return;
