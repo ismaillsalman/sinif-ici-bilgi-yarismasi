@@ -16,12 +16,18 @@ Kahoot benzeri dinamik yarışma deneyimi sunan, öğretmenin kendi müfredatın
 - **Quiz Katılımı:** Katılım koduyla veya açık quizlere anında giriş.
 - **İnteraktif Yarışma Arayüzü:** Süre sayacı, renkli seçenekler, anlık doğru/yanlış animasyonları.
 - **Gelişim ve Rozetler:** Tamamlanan quizler, puanlar, başarı rozetleri ve konu bazlı eksik analizi.
-- **🤖 AI Fen Bilimleri Öğretmeni:** Google Gemini 2.5 Flash destekli, fen bilimleri müfredatına özel soru-cevap asistanı.
-
-### 🔐 Güvenlik & Mimari
-- **Kayıt ve Şifreli Giriş:** Rol bazlı (Öğretmen / Öğrenci) kayıt ve şifreli kimlik doğrulama.
+- **🤖 AI Fen Bilimleri Öğretmeni:** Google Gemini 3.6 Flash destekli, fen bilimleri müfredatına özel soru-cevap asistanı.
+- **Canlı Quiz Sunumu:** Öğretmen panelinden tek tıkla yarışma başlatma, canlı soru geçişi ve liderlik tablosu.
 - **Sunucu Taraflı AI Proxy:** API anahtarları asla istemciye sızdırılmaz; `app/api/chat/route.ts` üzerinden `process.env.GEMINI_API_KEY` ile güvenli iletişim.
-- **Repository Pattern:** Veri katmanı (`lib/data/`) arayüzden tamamen soyutlanmış; ileride PostgreSQL/Supabase/Prisma'ya kolayca bağlanabilir.
+
+---
+
+## 🛠️ Teknoloji Yığını
+
+- **Framework:** [Next.js 16 (App Router)](https://nextjs.org/)
+- **UI & Stil:** React 19, Tailwind CSS 4, Lucide Icons, Glassmorphism
+- **Grafikler:** Recharts
+- **Yapay Zeka:** Google Gemini API (gemini-3.6-flash)
 
 ---
 

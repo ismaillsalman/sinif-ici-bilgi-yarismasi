@@ -38,10 +38,12 @@ Kuralların:
 - Sadece fen bilimleri (fizik, kimya, biyoloji, yer bilimleri, astronomi) konularında cevap ver.
 - Fen bilimleri dışındaki sorularda nazikçe konuyu fen bilimlerine yönlendir.`;
 
+    const model = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+
     // Make API call to the Gemini REST API
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: {
