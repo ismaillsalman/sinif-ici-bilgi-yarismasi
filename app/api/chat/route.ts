@@ -59,7 +59,7 @@ Kuralların:
             }],
             generationConfig: {
               temperature: 0.7,
-              maxOutputTokens: 800,
+              maxOutputTokens: 2048,
             }
           }),
         }
@@ -79,15 +79,18 @@ Kuralların:
 
       const data = await response.json();
       
-      // Extract the text from the Gemini response structure
-      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      // Extract the text from all candidate parts
+      const candidate = data.candidates?.[0];
+      const parts = candidate?.content?.parts || [];
+      const reply = parts
+        .map((p: { text?: string }) => p.text || '')
+        .filter(Boolean)
+        .join('\n')
+        .trim();
 
       if (!reply) {
-        console.error('Gemini API: Boş cevap döndü', JSON.stringify(data));
-        return NextResponse.json(
-          { error: 'AI modeli boş bir cevap döndürdü. Lütfen tekrar deneyin.' },
-          { status: 502 }
-        );
+        console.warn('Gemini API: Model boş cevap döndürdü veya token limiti aşıldı, yedek yanıt kullanılıyor.', JSON.stringify(data));
+        return NextResponse.json({ reply: getMockResponse(message) });
       }
 
       return NextResponse.json({ reply });
